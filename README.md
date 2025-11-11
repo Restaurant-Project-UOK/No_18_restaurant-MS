@@ -8,12 +8,14 @@ The Full Stack Project Repository
 **Git Repository:**  
 [https://github.com/Restaurant-Project-UOK/No_18_restaurant-MS.git](https://github.com/Restaurant-Project-UOK/No_18_restaurant-MS.git)
 
-1. Create a new branch from the **development** branch:
-   ```bash
-   git checkout development
-   git pull
-   git checkout -b dev_<your_name>
+1. Create a new branch from the **development** branch as dev_<your_name>
 Clone the repository and switch to your branch:
+
+  ```bash
+    git clone https://github.com/Restaurant-Project-UOK/No_18_restaurant-MS.git
+    cd No_18_restaurant-MS
+    git checkout dev_<your_name> 
+  ```
 
 You must have an empty project folder before starting your setup.
 
