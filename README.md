@@ -21,16 +21,16 @@ You must have an empty project folder before starting your setup.
 
 Go to your respective folders, make your updates, and then create a Pull Request (PR) to the main branch when ready.
 
-# ⚙️ Environment Variables Setup
+## ⚙️ Environment Variables Setup
 Create or update a .env file in the root folder with your environment variables.
 If you add any variables specific to your module, include a short comment describing them.
 
-Example:
-# Custom Variable (With Service Name)
+## Example:
+ Custom Variable (With Service Name)
 YOUR_KEY=yourapikey  # Used for external API requests
 
 
-# 📘 Task Analysis
+## 📘 Task Analysis
 Use your project handbook to analyze and understand your assigned task before beginning development.
 
 # ✅ Good Luck!
