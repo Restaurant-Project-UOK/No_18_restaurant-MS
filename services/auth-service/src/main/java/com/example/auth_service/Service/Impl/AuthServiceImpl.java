@@ -1,0 +1,85 @@
+package com.example.auth_service.Service.Impl;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.auth_service.DTO.LoginRequestDto;
+import com.example.auth_service.DTO.RegisterRequestDto;
+import com.example.auth_service.DTO.TokenResponseDto;
+import com.example.auth_service.DTO.UserResponseDto;
+import com.example.auth_service.Entity.User;
+import com.example.auth_service.Repository.UserRepository;
+import com.example.auth_service.Security.JwtService;
+import com.example.auth_service.Service.AuthService;
+
+@Service
+public class AuthServiceImpl implements AuthService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final String jwtSecret;
+
+    public AuthServiceImpl(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            @Value("${jwt.secret}") String jwtSecret
+    ) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.jwtSecret = jwtSecret;
+    }
+
+    @Transactional
+    @Override
+    public UserResponseDto register(RegisterRequestDto dto) {
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("Email already in use");
+        }
+
+        User user = new User();
+        user.setEmail(dto.getEmail());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setRole(dto.getRole());
+        user.setProvider(dto.getProvider());
+
+        userRepository.save(user);
+        return new UserResponseDto(user);
+    }
+
+    @Override
+    public TokenResponseDto login(LoginRequestDto dto) {
+        User user = userRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid password");
+        }
+
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        return new TokenResponseDto(accessToken, refreshToken, 15 * 60, 7 * 24 * 60 * 60, user);
+    }
+
+    @Override
+    public TokenResponseDto googleLogin(LoginRequestDto dto) {
+        User user = userRepository.findByEmail(dto.getEmail())
+                .orElseGet(() -> {
+                    User newUser = new User();
+                    newUser.setEmail(dto.getEmail());
+                    newUser.setProvider(2); // GOOGLE
+                    newUser.setRole(1); // CUSTOMER default
+                    return userRepository.save(newUser);
+                });
+
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        return new TokenResponseDto(accessToken, refreshToken, 15 * 60, 7 * 24 * 60 * 60, user);
+    }
+}
