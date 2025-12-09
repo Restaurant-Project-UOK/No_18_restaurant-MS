@@ -1,4 +1,4 @@
-package com.example.auth_service.DTO;
+/*package com.example.auth_service.DTO;
 
 import com.example.auth_service.Entity.User;
 
@@ -27,3 +27,4 @@ public class UserResponseDto {
         this.provider = user.getProvider();
     }
 }
+    */

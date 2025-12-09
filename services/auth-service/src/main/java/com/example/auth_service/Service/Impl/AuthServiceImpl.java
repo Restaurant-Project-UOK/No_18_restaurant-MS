@@ -1,5 +1,7 @@
 package com.example.auth_service.Service.Impl;
 
+import java.time.LocalDateTime;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -7,8 +9,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.auth_service.DTO.LoginRequestDto;
 import com.example.auth_service.DTO.RegisterRequestDto;
 import com.example.auth_service.DTO.TokenResponseDto;
-import com.example.auth_service.DTO.UserResponseDto;
+import com.example.auth_service.DTO.ProfileDto;
+import com.example.auth_service.Entity.Token;
 import com.example.auth_service.Entity.User;
+import com.example.auth_service.Repository.TokenRepository;
 import com.example.auth_service.Repository.UserRepository;
 import com.example.auth_service.Security.JwtService;
 import com.example.auth_service.Service.AuthService;
@@ -19,20 +23,23 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final TokenRepository tokenRepository;
 
     public AuthServiceImpl(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService
+            JwtService jwtService,
+            TokenRepository tokenRepository
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.tokenRepository = tokenRepository;
     }
 
     @Transactional
     @Override
-    public UserResponseDto register(RegisterRequestDto dto) {
+    public ProfileDto register(RegisterRequestDto dto) {
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email already in use");
         }
@@ -44,10 +51,11 @@ public class AuthServiceImpl implements AuthService {
         user.setProvider(dto.getProvider());
 
         userRepository.save(user);
-        return new UserResponseDto(user);
+        return new ProfileDto(user, null);
     }
 
     @Override
+    @Transactional
     public TokenResponseDto login(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -56,12 +64,31 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid password");
         }
 
+        // Update last login
+        user.setLastLogin(LocalDateTime.now());
+        userRepository.save(user);
+
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        return new TokenResponseDto(accessToken, refreshToken, user);
+        // ✅ SAVE TOKENS TO DATABASE
+        saveToken(user, accessToken, 1); // 1 = ACCESS
+        saveToken(user, refreshToken, 2); // 2 = REFRESH
+
+        return new TokenResponseDto(accessToken, refreshToken);
     }
 
+    private void saveToken(User user, String tokenString, Integer type) {
+        Token token = new Token();
+        token.setUser(user);
+        token.setToken(tokenString);
+        token.setType(type);
+        token.setExpiry(type == 1 
+            ? LocalDateTime.now().plusMinutes(15) 
+            : LocalDateTime.now().plusDays(7));
+        token.setRevoked(0);
+        tokenRepository.save(token);
+    }
     @Override
     public TokenResponseDto googleLogin(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.getEmail())
@@ -76,6 +103,6 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        return new TokenResponseDto(accessToken, refreshToken, user);
+        return new TokenResponseDto(accessToken, refreshToken);
     }
 }

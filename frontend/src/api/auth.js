@@ -1,15 +1,18 @@
 // src/api/auth.js
 
-const BASE_URL = "http://localhost:8080/api/auth"; // matches @RequestMapping("/api/auth")
+const BASE_URL = "http://localhost:8081/api/auth"; // matches @RequestMapping("/api/auth")
 
-// Register
+// Register (ignore response)
 export async function register({ fullName, email, password, role = 1 }) {
   const res = await fetch(`${BASE_URL}/register`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fullName, email, password, role }),
+    headers: { 
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ fullName, email, password, role, provider: 1 }),
   });
-  return res.json();
+    if (!res.ok) throw new Error("Registration failed");
+        return res.json();
 }
 
 // Login (email + password)
@@ -19,7 +22,8 @@ export async function login({ email, password }) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  return res.json();
+  if (!res.ok) throw new Error("Login failed");
+    return res.json();
 }
 
 // Google OAuth login
